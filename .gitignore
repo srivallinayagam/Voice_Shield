@@ -1,0 +1,6 @@
+Dataset/
+*.pkl
+*.docx
+node_modules/
+__pycache__/
+.env
