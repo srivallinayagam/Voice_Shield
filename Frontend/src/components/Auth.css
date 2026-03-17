@@ -37,6 +37,7 @@
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.3s ease;
+  width: 100%;
 }
 
 .form-input:focus {
@@ -44,6 +45,52 @@
   border-color: var(--primary-accent);
   box-shadow: inset 0 0 8px rgba(0, 240, 255, 0.2);
 }
+
+/* ========================================= */
+/* --- NEW: Password Toggle Styles --- */
+/* ========================================= */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-wrapper .form-input {
+  padding-right: 3rem; /* Prevents text from hiding under the eye icon */
+}
+
+/* --- Hide Native Browser Password Icons (Edge/Windows) --- */
+.form-input::-ms-reveal,
+.form-input::-ms-clear {
+  display: none;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 60%; /* Pushes to the exact vertical middle */
+  transform: translateY(-50%); /* Pulls up by half its height to perfectly center */
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.password-toggle:hover {
+  color: var(--primary-accent);
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+/* ========================================= */
 
 .btn-primary {
   background: linear-gradient(135deg, var(--secondary-accent), var(--primary-accent));
@@ -64,7 +111,8 @@
   transform: translateY(-2px);
   box-shadow: var(--glow-shadow);
 }
-/* --- Social Login Styles (Add to Auth.css) --- */
+
+/* --- Social Login Styles --- */
 .divider {
   display: flex;
   align-items: center;

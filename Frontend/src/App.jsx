@@ -7,8 +7,9 @@ import Footer from "./components/Footer";
 import Home from "./components/Home";
 import About from "./components/About";
 import Contact from "./components/Contact";
-import SignIn from "./components/Signin";
-import SignUp from "./components/Signup";
+import SignIn from "./components/SignIn";
+import SignUp from "./components/SignUp";
+import Records from "./components/Records";
 import ScrollToTop from "./components/ScrollToTop";
 
 // Import your global styles
@@ -28,6 +29,7 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/records" element={<Records />} />
       </Routes>
 
       {/* Footer stays at the bottom of every page */}

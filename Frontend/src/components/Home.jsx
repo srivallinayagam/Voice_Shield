@@ -28,6 +28,20 @@ function Home() {
     const formData = new FormData();
     formData.append("file", file);
 
+    // ======================================================================
+    // --- NEW: Attach user data to the scan so the database can save it! ---
+    // ======================================================================
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const { email } = JSON.parse(userData);
+      formData.append("email", email);
+    }
+
+    // Attach the file size so it looks nice in the table (converts bytes to MB)
+    const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+    formData.append("size", `${fileSizeInMB} MB`);
+    // ======================================================================
+
     try {
       setLoading(true);
       setOutput(null);

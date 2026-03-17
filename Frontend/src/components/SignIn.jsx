@@ -1,11 +1,63 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import "./Auth.css";
 
 const SignIn = () => {
-  const handleSignIn = (e) => {
+  // 1. Setup State to hold the user's input and UI feedback
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // NEW: State for toggling password visibility
+  const [showPassword, setShowPassword] = useState(false);
+
+  const navigate = useNavigate(); // Used to redirect after a successful login
+
+  const handleSignIn = async (e) => {
     e.preventDefault();
-    console.log("Signing in...");
+    setErrorMsg(""); // Clear any old errors when they try again
+    
+    // Moved inside function
+    const CleanEmail = email.trim();
+    const CleanPassword = password.trim();
+
+    try {
+      setIsLoading(true);
+
+      // 2. Send the login request to your Flask backend
+      const response = await fetch("http://127.0.0.1:5000/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: CleanEmail, 
+          password: CleanPassword
+        }) 
+      });
+
+      const data = await response.json();
+
+      // 3. Handle the backend's response
+      if (response.ok) {
+        // ================================================================
+        // THE MAGIC LINE: Saves the user data so the Navbar knows they are logged in!
+        // ================================================================
+        localStorage.setItem("user", JSON.stringify({ name: data.name, email: data.email }));
+        
+        // Login successful! 
+        alert(`Welcome back, ${data.name}!`);
+        
+        // Redirect them to the main scanner page
+        navigate("/"); 
+      } else {
+        // Login failed (e.g., wrong password, email doesn't exist)
+        setErrorMsg(data.error || "Failed to sign in.");
+      }
+    } catch (err) {
+      setErrorMsg("Server error. Is the Flask backend running?");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -13,16 +65,61 @@ const SignIn = () => {
       <div className="card">
         <h2 className="title-center">Welcome Back</h2>
         
+        {/* Display error messages dynamically */}
+        {errorMsg && (
+          <p style={{ color: "#ff0055", textAlign: "center", marginBottom: "1rem", fontWeight: "bold" }}>
+            {errorMsg}
+          </p>
+        )}
+
         <form onSubmit={handleSignIn}>
           <div className="form-group">
             <label>Email</label>
-            <input type="email" className="form-input" required />
+            <input 
+              type="email" 
+              className="form-input" 
+              required 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)} 
+            />
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input type="password" className="form-input" required />
+            {/* --- NEW: Password Wrapper with Toggle --- */}
+            <div className="password-wrapper">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                className="form-input" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} 
+              />
+              <button 
+                type="button" 
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? "Hide Password" : "Show Password"}
+              >
+                {showPassword ? (
+                  /* Eye Slash SVG (Hidden) */
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  /* Eye SVG (Visible) */
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
+            </div>
+            {/* ----------------------------------------- */}
           </div>
-          <button type="submit" className="btn-primary">Sign In</button>
+          <button type="submit" className="btn-primary" disabled={isLoading}>
+            {isLoading ? "Authenticating..." : "Sign In"}
+          </button>
         </form>
 
         {/* --- Social Login Section --- */}
