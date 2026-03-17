@@ -1,0 +1,40 @@
+/* src/App.css */
+:root {
+  --bg-dark: #070b19; /* Deeper, darker blue-black */
+  --bg-card: rgba(30, 41, 59, 0.7); /* Transparent for glass effect */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  
+  /* Vibrant Accents */
+  --primary-accent: #00f0ff; /* Neon Cyan */
+  --secondary-accent: #7000ff; /* Deep Purple */
+  --glow-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--bg-dark);
+  /* Subtle background mesh gradient */
+  background-image: radial-gradient(circle at top right, rgba(112, 0, 255, 0.15), transparent 400px),
+                    radial-gradient(circle at bottom left, rgba(0, 240, 255, 0.1), transparent 400px);
+  color: var(--text-main);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.page-container {
+  min-height: calc(100vh - 140px);
+  padding: 4rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+h1, h2 { font-weight: 700; margin-bottom: 1rem; }
+.title-center { text-align: center; margin-bottom: 2rem; }

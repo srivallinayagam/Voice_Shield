@@ -1,0 +1,48 @@
+/* src/components/Navbar.css */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 5%;
+  background: rgba(7, 11, 25, 0.8);
+  backdrop-filter: blur(12px); /* Frosted glass effect */
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-brand {
+  font-size: 1.8rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--primary-accent), var(--secondary-accent));
+  
+  /* The WebKit specific version */
+  -webkit-background-clip: text;
+  
+  /* The standard version VS Code is asking for */
+  background-clip: text; 
+  
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+  letter-spacing: 1px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.nav-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.05rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.nav-link:hover {
+  color: var(--primary-accent);
+  text-shadow: var(--glow-shadow);
+}

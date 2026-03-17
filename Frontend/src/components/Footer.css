@@ -1,0 +1,15 @@
+/* src/components/Footer.css */
+.footer {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  background: rgba(7, 11, 25, 0.95);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: auto;
+}
+
+.footer span {
+  color: var(--primary-accent);
+  font-weight: bold;
+}

@@ -1,8 +1,0 @@
-Flask
-flask-cors
-numpy
-librosa
-scikit-learn
-joblib
-tensorflow
-soundfile

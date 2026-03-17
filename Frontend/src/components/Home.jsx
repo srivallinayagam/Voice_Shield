@@ -1,18 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import "./Home.css";
 
 function Home() {
-  const [output, setOutput] = useState("Waiting...");
+  const [output, setOutput] = useState(null);
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
+  const [audioURL, setAudioURL] = useState(null);
+  
+  // Reference to secretly click the hidden file input
+  const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
+    setAudioURL(URL.createObjectURL(selectedFile));
+    setOutput(null); // Reset output when a new file is chosen
   };
 
   const uploadAudio = async () => {
     if (!file) {
-      alert("Select file first");
+      alert("Please select an audio file first.");
       return;
     }
 
@@ -21,7 +30,9 @@ function Home() {
 
     try {
       setLoading(true);
+      setOutput(null);
 
+      // Make sure your Flask backend is running!
       const response = await fetch("http://127.0.0.1:5000/predict", {
         method: "POST",
         body: formData,
@@ -29,30 +40,105 @@ function Home() {
 
       const data = await response.json();
 
-      setOutput(
-        `${data.prediction} (Confidence: ${(data.confidence*100).toFixed(2)}%)`
-      );
+      if (data.error) {
+        setOutput(`Error: ${data.error}`);
+      } else {
+        // Storing as an object to easily style the prediction vs confidence
+        setOutput({
+          prediction: data.prediction,
+          confidence: data.confidence,
+        });
+      }
     } catch (err) {
-      console.error(err);
-      alert("Upload failed");
+      setOutput("Error: Server connection failed. Is the Flask backend running?");
     } finally {
       setLoading(false);
     }
   };
 
+  // Determine border and text colors based on the result
+  const isFake = output?.prediction === "Fake Voice";
+  const resultColor = isFake ? "#ff0055" : "var(--primary-accent)";
+  const resultShadow = isFake ? "0 0 15px rgba(255, 0, 85, 0.4)" : "var(--glow-shadow)";
+
   return (
-    <div className="container">
-      <h2>Audio Deepfake Detection</h2>
+    <div className="page-container home-container">
+      <h1 className="hero-title">
+        Audio Deepfake <span>Scanner</span>
+      </h1>
+      <p className="hero-subtitle">
+        Upload an audio file to analyze for synthetic manipulation and AI voice cloning.
+      </p>
 
-      <input type="file" accept="audio/*" onChange={handleFileChange} />
+      {/* The Hidden File Input */}
+      <input
+        type="file"
+        accept="audio/*"
+        onChange={handleFileChange}
+        ref={fileInputRef}
+        style={{ display: "none" }}
+      />
 
-      <br /><br />
+      {/* The Styled Upload Box */}
+      <div 
+        className="upload-box" 
+        onClick={() => fileInputRef.current.click()}
+      >
+        <div className="upload-icon">🎙️</div>
+        <h3>{file ? file.name : "Click to Select Audio File"}</h3>
+        <p style={{ color: "var(--text-muted)", marginTop: "0.5rem" }}>
+          Supports WAV, MP3, FLAC, M4A, OGG
+        </p>
+      </div>
 
-      <button onClick={uploadAudio} disabled={loading}>
-        {loading ? "Checking..." : "Detect Audio"}
-      </button>
+      <br />
 
-      <p>{output}</p>
+      {/* Audio Preview and Scan Button */}
+      {audioURL && (
+        <div style={{ width: "100%", maxWidth: "600px", marginTop: "1rem" }}>
+          <audio 
+            controls 
+            src={audioURL} 
+            style={{ width: "100%", marginBottom: "1.5rem", borderRadius: "8px" }}
+          ></audio>
+          
+          <button 
+            className="btn-primary" 
+            onClick={uploadAudio} 
+            disabled={loading}
+          >
+            {loading ? "Analyzing Audio Signatures..." : "Run Security Scan"}
+          </button>
+        </div>
+      )}
+
+      {/* Results Display Area */}
+      {output && (
+        <div 
+          className="card" 
+          style={{ 
+            marginTop: "3rem", 
+            width: "100%", 
+            borderColor: typeof output === 'object' ? resultColor : '#ff0055',
+            boxShadow: typeof output === 'object' ? resultShadow : 'none'
+          }}
+        >
+          {typeof output === 'string' ? (
+             // Display Server Errors here
+            <p style={{ color: "#ff0055", fontWeight: "bold" }}>{output}</p>
+          ) : (
+            // Display valid predictions here
+            <>
+              <h2 style={{ color: resultColor, fontSize: "2rem", marginBottom: "0.5rem" }}>
+                {output.prediction}
+              </h2>
+              <p style={{ color: "var(--text-main)", fontSize: "1.1rem" }}>
+                Confidence Score: <strong>{output.confidence}%</strong>
+              </p>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
