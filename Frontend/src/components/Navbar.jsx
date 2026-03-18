@@ -28,7 +28,7 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <Link to="/" className="nav-brand">Audio Deepfake Detection </Link>
+      <Link to="/" className="nav-brand">Voice Shield </Link>
 
       <div className="nav-links">
         <Link to="/" className="nav-link">Home</Link>
@@ -48,15 +48,28 @@ const Navbar = () => {
           </>
         ) : (
           // --- LOGGED IN VIEW ---
+
           <div className="profile-section">
-            <div className="avatar" title={user.email}>
-              {/* Shows the first letter of their name (e.g., 'J' for John) */}
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <button onClick={handleLogout} className="nav-link logout-btn">
-              Logout
-            </button>
+          <div className="avatar" title={user.email}>
+            {/* 1. Check if user has a profile_pic URL */}
+            {user.profile_pic ? (
+              <img 
+                src={user.profile_pic} 
+                alt={user.name} 
+                className="avatar-img" 
+                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              /* 2. Fallback to your original letter avatar if no photo */
+              user.name.charAt(0).toUpperCase()
+            )}
           </div>
+          <button onClick={handleLogout} className="nav-link logout-btn">
+              Logout
+           </button>
+        </div>
+          
+           
         )}
       </div>
     </nav>

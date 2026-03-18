@@ -225,5 +225,48 @@ def get_user_records():
         "current_page": page
     }), 200
 
+# --- 6. GOOGLE LOGIN/SIGNUP ROUTE ---
+@app.route("/google-login", methods=["POST"])
+def google_login():
+    data = request.json
+    email = data.get("email")
+    name = data.get("name")
+    profile_pic = data.get("profile_pic")
+    action = data.get("action") # "signin" or "signup"
+
+    if not email:
+        return jsonify({"error": "No email provided"}), 400
+
+    user = users_collection.find_one({"email": email})
+
+    # Rule 1: They are trying to SIGN UP, but they already exist
+    if action == "signup" and user:
+        return jsonify({"error": "Account already exists! Please go to Sign In."}), 409
+
+    # Rule 2: They are trying to SIGN IN, but they don't exist
+    if action == "signin" and not user:
+        return jsonify({"error": "No account found! Please go to Sign Up."}), 404
+
+    # Rule 3: Valid Sign Up (Create the account)
+    if action == "signup" and not user:
+        new_user = {
+            "name": name,
+            "email": email,
+            "profile_pic": profile_pic,
+            "auth_type": "google",
+            "created_at": datetime.now()
+        }
+        users_collection.insert_one(new_user)
+        user = new_user # Load the new user data
+
+    # Return success for both valid sign-ins and valid sign-ups
+    return jsonify({
+        "message": "Google Authentication Successful",
+        "name": user["name"],
+        "email": user["email"],
+        "profile_pic": user.get("profile_pic")
+    }), 200
+
+    
 if __name__ == "__main__":
     app.run(debug=True)
