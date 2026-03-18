@@ -28,7 +28,7 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <Link to="/" className="nav-brand">AuraGuard</Link>
+      <Link to="/" className="nav-brand">Audio Deepfake Detection </Link>
 
       <div className="nav-links">
         <Link to="/" className="nav-link">Home</Link>

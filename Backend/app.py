@@ -11,10 +11,9 @@ import uuid
 import re
 from dotenv import load_dotenv 
 
+# 1. Initialize Flask & Load Environment
 app = Flask(__name__)
 CORS(app)
-
-# 2. Load the variables from the .env file into Python's environment
 load_dotenv()
 
 # ==========================================
@@ -27,22 +26,26 @@ os.environ["PATH"] = FFMPEG_BIN_PATH + os.pathsep + os.environ.get("PATH", "")
 # ==========================================
 # MONGODB ATLAS CONNECTION
 # ==========================================
-# IMPORTANT: Put your actual Atlas connection string here
 MONGO_URI = os.getenv("MONGO_URI") 
 
 if not MONGO_URI:
     raise ValueError("No MONGO_URI found. Please check your .env file!")
 
+# Initialize variables at the top level to avoid NameError
+client = MongoClient(MONGO_URI)
+db = client["AudioGuardDB"] 
+
+# Define collections (Global Scope)
+users_collection = db["users"] 
+contact_collection = db["contacts"] # Changed to 'contacts' for consistency
+records_collection = db["records"]
+
 try:
-    client = MongoClient(MONGO_URI)
-    db = client["AudioGuardDB"] 
-    users_collection = db["users"] 
-    contact_collection = db['contact']
-    records_collection = db["records"]
+    # Test connection
+    client.admin.command('ping')
     print("Connected to MongoDB Atlas successfully!")
 except Exception as e:
-    print(f"Failed to connect to MongoDB: {e}")
-
+    print(f"CRITICAL ERROR: Failed to connect to MongoDB: {e}")
 
 # Load AI model once at startup
 print("Loading AI Model...")
@@ -79,9 +82,11 @@ def is_valid_password(password):
 # ==========================================
 # ROUTES
 # ==========================================
+
 @app.route("/")
 def home():
     return "Audio Deepfake API Running (Audio & Auth)"
+
 # --- 1. AI PREDICTION ROUTE ---
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -89,23 +94,21 @@ def predict():
         return jsonify({"error":"No file uploaded"}), 400
 
     file = request.files["file"]
-    
-    # NEW: Catch the user data sent from the frontend
     email = request.form.get("email", "Guest")
     file_size = request.form.get("size", "Unknown")
     
     temp = None
-
     try:
         temp = save_audio(file)
         spec = extract_spectrogram(temp)
         spec = np.expand_dims(spec, axis=0)
         prediction = float(model.predict(spec)[0][0])
+        
         result = "Fake Voice" if prediction > 0.5 else "Real Voice"
         confidence = prediction if prediction > 0.5 else 1 - prediction
         confidence_pct = round(confidence * 100, 2)
 
-        # NEW: Save the scan to the database if the user is logged in!
+        # Save to records if logged in
         if email != "Guest":
             records_collection.insert_one({
                 "email": email,
@@ -138,22 +141,19 @@ def signup():
         return jsonify({"error": "All fields are required"}), 400
     
     if not is_valid_password(password):
-        return jsonify({"error": "Password does not meet security requirements"}), 400
+        return jsonify({"error": "Password does not meet requirements"}), 400
 
     if users_collection.find_one({"email": email}):
-        return jsonify({"error": "Email is already registered"}), 409
+        return jsonify({"error": "Email already registered"}), 409
 
     hashed_password = generate_password_hash(password)
-
-    new_user = {
+    users_collection.insert_one({
         "name": name,
         "email": email,
         "password": hashed_password
-    }
-    users_collection.insert_one(new_user)
+    })
 
     return jsonify({"message": "User created successfully!"}), 201
-
 
 # --- 3. USER SIGNIN ROUTE ---
 @app.route("/signin", methods=["POST"])
@@ -164,17 +164,14 @@ def signin():
 
     user = users_collection.find_one({"email": email})
 
-    if not user:
-        return jsonify({"error": "Invalid email or password"}), 401
-
-    if check_password_hash(user["password"], password):
+    if user and check_password_hash(user["password"], password):
         return jsonify({
             "message": "Login successful!",
             "name": user["name"],
             "email": user["email"]
         }), 200
-    else:
-        return jsonify({"error": "Invalid email or password"}), 401
+    
+    return jsonify({"error": "Invalid email or password"}), 401
 
 # --- 4. CONTACT SUPPORT ROUTE ---
 @app.route("/contact", methods=["POST"])
@@ -184,63 +181,49 @@ def contact():
     email = data.get("email")
     message = data.get("message")
 
-    # 1. Validate the incoming data
     if not name or not email or not message:
         return jsonify({"error": "All fields are required"}), 400
 
-    # 2. Package the data with a timestamp
-    new_contact_msg = {
+    contact_collection.insert_one({
         "name": name,
         "email": email,
         "message": message,
-        "timestamp": datetime.now().isoformat() # Saves the exact date and time
-    }
-    
-    # 3. Save to the new MongoDB collection
-    contact_collection.insert_one(new_contact_msg)
+        "timestamp": datetime.now().isoformat()
+    })
 
-    return jsonify({"message": "Message sent successfully! We will get back to you soon."}), 201
+    return jsonify({"message": "Message sent successfully!"}), 201
     
-# --- 5. GET USER RECORDS ROUTE ---
+# --- 5. GET USER RECORDS ROUTE (PAGINATED) ---
 @app.route("/user_records", methods=["POST"])
 def get_user_records():
     data = request.json
     email = data.get("email")
     
-    # NEW: Grab pagination settings from the frontend (Defaults to page 1, 5 items)
     page = int(data.get("page", 1))
     limit = int(data.get("limit", 5))
 
-    # Security check: Ensure limit is exactly one of your allowed options
     if limit not in [5, 25, 50, 100]:
         limit = 5
 
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
-    # Calculate how many records to skip based on the current page
     skip_amount = (page - 1) * limit
-
-    # Fetch the exact chunk of records, sorted by newest first
     cursor = records_collection.find({"email": email}).sort("timestamp", -1).skip(skip_amount).limit(limit)
     records = list(cursor)
 
-    # Get the total count of records to tell the frontend how many pages exist
     total_records = records_collection.count_documents({"email": email})
     total_pages = (total_records + limit - 1) // limit
 
-    # Convert MongoDB's ObjectId
     for record in records:
         record["_id"] = str(record["_id"])
 
-    # Package the records alongside the pagination math
     return jsonify({
         "records": records,
         "total_records": total_records,
         "total_pages": total_pages,
         "current_page": page
     }), 200
-
 
 if __name__ == "__main__":
     app.run(debug=True)
