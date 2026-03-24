@@ -10,4 +10,5 @@ resampy
 pydub
 pysound
 pysoundfile
-certifi
+certify
+pymongo
