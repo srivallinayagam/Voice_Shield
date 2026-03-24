@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react"; 
 import "./Home.css";
 
 function Home() {
@@ -9,6 +9,44 @@ function Home() {
   
   // Reference to secretly click the hidden file input
   const fileInputRef = useRef(null);
+
+  // ======================================================================
+  // --- GITHUB OAUTH CATCHER ---
+  // ======================================================================
+  useEffect(() => {
+    // 1. Check the URL for GitHub's return parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+
+    // 2. If we caught a code, we know they just got back from GitHub!
+    if (code) {
+      console.log("GitHub Code caught:", code);
+      
+      // 3. Send this code to Flask to exchange it for the user profile
+      fetch("http://127.0.0.1:5000/github-login", { 
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      })
+        .then((res) => res.json())
+        .then((userData) => {
+          if (userData.error) {
+            console.error("GitHub Auth Error:", userData.error);
+          } else {
+            console.log("Successfully fetched user profile!", userData);
+            
+            // 1. Save the user data
+            localStorage.setItem("user", JSON.stringify(userData));
+            
+            // 2. THIS IS THE FIX: Shout into the void so the Navbar hears it and updates!
+            window.dispatchEvent(new Event("authChange"));
+          }
+        });
+    }
+  }, []);
+  // ======================================================================
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -28,9 +66,7 @@ function Home() {
     const formData = new FormData();
     formData.append("file", file);
 
-    // ======================================================================
-    // --- NEW: Attach user data to the scan so the database can save it! ---
-    // ======================================================================
+    // --- Attach user data to the scan so the database can save it! ---
     const userData = localStorage.getItem("user");
     if (userData) {
       const { email } = JSON.parse(userData);
@@ -40,7 +76,6 @@ function Home() {
     // Attach the file size so it looks nice in the table (converts bytes to MB)
     const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
     formData.append("size", `${fileSizeInMB} MB`);
-    // ======================================================================
 
     try {
       setLoading(true);

@@ -10,3 +10,4 @@ resampy
 pydub
 pysound
 pysoundfile
+certifi

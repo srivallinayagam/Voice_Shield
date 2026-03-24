@@ -1,14 +1,16 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from datetime import datetime
-from pymongo import MongoClient
-from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import re
+import uuid
+import requests # <--- Moved to the top!
+import certifi
 import librosa
 import numpy as np
 import tensorflow as tf
-import os
-import uuid
-import re
+from datetime import datetime
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from pymongo import MongoClient
+from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv 
 
 # 1. Initialize Flask & Load Environment
@@ -31,23 +33,22 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     raise ValueError("No MONGO_URI found. Please check your .env file!")
 
-# Initialize variables at the top level to avoid NameError
-client = MongoClient(MONGO_URI)
+# Initialize variables at the top level
+client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["AudioGuardDB"] 
 
-# Define collections (Global Scope)
+# Define collections
 users_collection = db["users"] 
-contact_collection = db["contacts"] # Changed to 'contacts' for consistency
+contact_collection = db["contacts"] 
 records_collection = db["records"]
 
 try:
-    # Test connection
     client.admin.command('ping')
     print("Connected to MongoDB Atlas successfully!")
 except Exception as e:
     print(f"CRITICAL ERROR: Failed to connect to MongoDB: {e}")
 
-# Load AI model once at startup
+# Load AI model
 print("Loading AI Model...")
 model = tf.keras.models.load_model("voice_model.h5")
 print("AI Model Loaded!")
@@ -108,7 +109,6 @@ def predict():
         confidence = prediction if prediction > 0.5 else 1 - prediction
         confidence_pct = round(confidence * 100, 2)
 
-        # Save to records if logged in
         if email != "Guest":
             records_collection.insert_one({
                 "email": email,
@@ -232,23 +232,19 @@ def google_login():
     email = data.get("email")
     name = data.get("name")
     profile_pic = data.get("profile_pic")
-    action = data.get("action") # "signin" or "signup"
+    action = data.get("action") 
 
     if not email:
         return jsonify({"error": "No email provided"}), 400
 
     user = users_collection.find_one({"email": email})
 
-    # Rule 1: They are trying to SIGN UP, but they already exist
     if action == "signup" and user:
         return jsonify({"error": "Account already exists! Please go to Sign In."}), 409
-
-    # Rule 2: They are trying to SIGN IN, but they don't exist
     if action == "signin" and not user:
         return jsonify({"error": "No account found! Please go to Sign Up."}), 404
 
-    # Rule 3: Valid Sign Up (Create the account)
-    if action == "signup" and not user:
+    if not user:
         new_user = {
             "name": name,
             "email": email,
@@ -257,14 +253,92 @@ def google_login():
             "created_at": datetime.now()
         }
         users_collection.insert_one(new_user)
-        user = new_user # Load the new user data
+        user = new_user 
 
-    # Return success for both valid sign-ins and valid sign-ups
     return jsonify({
         "message": "Google Authentication Successful",
         "name": user["name"],
         "email": user["email"],
         "profile_pic": user.get("profile_pic")
+    }), 200
+
+# --- 7. GITHUB LOGIN/SIGNUP ROUTE ---
+@app.route("/github-login", methods=["POST"])
+def github_login():
+    data = request.json
+    code = data.get("code")
+    action = data.get("action") 
+
+    if not code:
+        return jsonify({"error": "No code provided"}), 400
+
+    client_id = os.getenv("GITHUB_CLIENT_ID")
+    client_secret = os.getenv("GITHUB_CLIENT_SECRET")
+
+    token_url = "https://github.com/login/oauth/access_token"
+    headers = {"Accept": "application/json"}
+    payload = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": code
+    }
+
+    token_res = requests.post(token_url, json=payload, headers=headers).json()
+    access_token = token_res.get("access_token")
+
+    if not access_token:
+        return jsonify({"error": "Failed to get access token from GitHub"}), 400
+
+    user_url = "https://api.github.com/user"
+    user_headers = {"Authorization": f"Bearer {access_token}"}
+    github_user = requests.get(user_url, headers=user_headers).json()
+
+    email_url = "https://api.github.com/user/emails"
+    emails = requests.get(email_url, headers=user_headers).json()
+
+    primary_email = None
+    for e in emails:
+        if e.get("primary"):
+            primary_email = e.get("email")
+            break
+
+    if not primary_email:
+        return jsonify({"error": "No primary email found on GitHub"}), 400
+
+    name = github_user.get("name") or github_user.get("login")
+    profile_pic = github_user.get("avatar_url")
+    email = primary_email
+
+    user = users_collection.find_one({"email": email})
+
+    # --- SAFETY NET ---
+    # If React forgets to send action, default to basic login/signup behavior so it doesn't crash
+    if not action:
+        action = "signin" if user else "signup"
+
+    # Strict flow rules
+    if action == "signup" and user:
+        return jsonify({"error": "Account already exists! Please go to Sign In."}), 409
+
+    if action == "signin" and not user:
+        return jsonify({"error": "No account found! Please go to Sign Up."}), 404
+
+    if not user:
+        new_user = {
+            "name": name,
+            "email": email,
+            "profile_pic": profile_pic,
+            "auth_type": "github",
+            "created_at": datetime.now()
+        }
+        users_collection.insert_one(new_user)
+        user = new_user 
+
+    return jsonify({
+        "message": "GitHub Authentication Successful",
+        "name": user["name"],
+        "email": user["email"],
+        "profile_pic": user.get("profile_pic", profile_pic)
     }), 200
 
     

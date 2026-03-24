@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google'; // <-- Added import
+import { useGoogleLogin } from '@react-oauth/google'; 
 import "./Auth.css";
 
 const SignIn = () => {
-  // 1. Setup State to hold the user's input and UI feedback
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // State for toggling password visibility
   const [showPassword, setShowPassword] = useState(false);
 
-  const navigate = useNavigate(); // Used to redirect after a successful login
+  const navigate = useNavigate(); 
 
   // --- MANUAL EMAIL/PASSWORD LOGIN ---
   const handleSignIn = async (e) => {
     e.preventDefault();
-    setErrorMsg(""); // Clear any old errors
+    setErrorMsg(""); 
     
     const CleanEmail = email.trim();
     const CleanPassword = password.trim();
@@ -38,15 +35,15 @@ const SignIn = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Save the user data so the Navbar knows they are logged in
         localStorage.setItem("user", JSON.stringify({ 
           name: data.name, 
           email: data.email,
-          profile_pic: data.profile_pic // Make sure we grab the pic if it exists!
+          profile_pic: data.profile_pic 
         }));
         
+        // Broadcast the update to the Navbar!
+        window.dispatchEvent(new Event("authChange"));
         navigate("/"); 
-        window.location.reload(); // Force refresh for Navbar update
       } else {
         setErrorMsg(data.error || "Failed to sign in.");
       }
@@ -61,16 +58,14 @@ const SignIn = () => {
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        setIsLoading(true); // Fixes the "laggy" feeling!
+        setIsLoading(true); 
         setErrorMsg("");
 
-        // 1. Get info from Google
         const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         });
         const googleUser = await res.json();
 
-        // 2. Send to your Flask /google-login route with action: "signin"
         const backendRes = await fetch("http://127.0.0.1:5000/google-login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -85,16 +80,16 @@ const SignIn = () => {
         const data = await backendRes.json();
 
         if (backendRes.ok) {
-          // Success: User exists, let them in!
           localStorage.setItem("user", JSON.stringify({ 
             name: data.name, 
             email: data.email,
             profile_pic: data.profile_pic
           }));
+          
+          // Broadcast the update to the Navbar!
+          window.dispatchEvent(new Event("authChange"));
           navigate("/"); 
-          window.location.reload();
         } else if (backendRes.status === 404) {
-          // Blocked: User doesn't exist yet
           setErrorMsg("No account found with this Google email. Please Sign Up first.");
         } else {
           setErrorMsg(data.error || "Google login failed on backend.");
@@ -108,12 +103,18 @@ const SignIn = () => {
     onError: () => setErrorMsg("Google Login Failed or was cancelled."),
   });
 
+  // Github Login Function
+  const handleGithubLogin = () => {
+    const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+    const scope = "read:user user:email"; 
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=${scope}&state=signin`;
+  };
+
   return (
     <div className="page-container">
       <div className="card">
         <h2 className="title-center">Welcome Back</h2>
         
-        {/* Display error messages dynamically */}
         {errorMsg && (
           <p style={{ color: "#ff0055", textAlign: "center", marginBottom: "1rem", fontWeight: "bold" }}>
             {errorMsg}
@@ -161,7 +162,6 @@ const SignIn = () => {
               </button>
             </div>
           </div>
-          {/* Main submit button disables while ANY loading is happening */}
           <button type="submit" className="btn-primary" disabled={isLoading}>
             {isLoading ? "Authenticating..." : "Sign In"}
           </button>
@@ -170,13 +170,12 @@ const SignIn = () => {
         <div className="divider">or continue with</div>
         
         <div className="social-container">
-          {/* --- GOOGLE BUTTON WITH ONCLICK --- */}
           <button 
             className="btn-social" 
             title="Google" 
             type="button" 
             onClick={() => googleLogin()}
-            disabled={isLoading} // Disables if already loading
+            disabled={isLoading} 
           >
             <svg viewBox="0 0 24 24">
               <path fill="#ea4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"/>
@@ -186,7 +185,13 @@ const SignIn = () => {
             </svg>
           </button>
 
-          <button className="btn-social" title="GitHub" type="button">
+          <button 
+          className="btn-social" 
+          title="GitHub" 
+          type="button"
+          onClick={()=>handleGithubLogin()}
+          disabled={isLoading}
+          >
             <svg viewBox="0 0 24 24">
               <path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
             </svg>
