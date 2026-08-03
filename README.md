@@ -51,7 +51,7 @@ VoiceShield is a web application that detects whether an uploaded voice recordin
 
 This project is trained using the **ASVspoof 2019** dataset obtained from **Kaggle**. The dataset contains genuine and spoofed speech samples designed for research in automatic speaker verification and audio deepfake detection.
 
-**Dataset:** Kaggle - ASVspoof 2019
+**Dataset:** Kaggle - ASVspoof 2019 (https://www.kaggle.com/datasets/awsaf49/asvpoof-2019-dataset)
 
 ---
 
@@ -126,7 +126,7 @@ http://localhost:5000
 
 ```bash
 cd frontend
-npm start
+npm run dev
 ```
 
 Frontend:
