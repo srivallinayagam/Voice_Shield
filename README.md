@@ -93,6 +93,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 pip install -r requirements.txt
+
 ```
 
 > **Note:** Make sure **FFmpeg** is installed and added to your system PATH.
