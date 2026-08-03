@@ -159,17 +159,18 @@ http://localhost:3000
 
 ---
 
-## 🌐 Live Demo
+## 🌐 Demo images
 
-**Demo:** *Coming Soon*
+<img width="1362" height="634" alt="opp3" src="https://github.com/user-attachments/assets/6f6c7f07-c60c-4dd8-a63d-ee8315891f3f" />
+<img width="1360" height="635" alt="opp2" src="https://github.com/user-attachments/assets/b5e7509c-17ec-4839-8f7d-56ddd3142dc7" />
+<img width="1360" height="607" alt="opp1" src="https://github.com/user-attachments/assets/e98f5972-690c-4891-be51-bbeca0cbb6e3" />
 
----
-
-## 🤖 Model
-
-**Hugging Face:** *Coming Soon*
 
 ---
+
+
+
+
 
 ## 📜 License
 
